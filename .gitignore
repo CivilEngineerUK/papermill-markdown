@@ -36,7 +36,7 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit tests / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -135,6 +135,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# any file in a 'json_file' folder
+**/json/*.json
 
 # Spyder project settings
 .spyderproject
