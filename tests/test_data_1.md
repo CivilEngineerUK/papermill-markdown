@@ -26,6 +26,10 @@ def hello_world():
     print("Hello, World!")
 ```
 
+### Footnote Example
+
+This is a paragraph with a footnote[^1] and some more text to demonstrate paragraph handling. For more information about tables, see [ref:tables].
+
 #### Image Example
 
 ![Example image caption](https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Vulpes_vulpes_ssp_fulvus.jpg/800px-Vulpes_vulpes_ssp_fulvus.jpg)
@@ -44,6 +48,6 @@ Table 1: Employee Information Table
 
 ###### Final Section
 
-This is a paragraph with a footnote[^1] and some more text to demonstrate paragraph handling. For more information about tables, see [ref:tables].
+This is just a paragraph to end the report.
 
 [^1]: This is a footnote text

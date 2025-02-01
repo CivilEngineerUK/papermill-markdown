@@ -3,7 +3,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union, Literal, ClassVar
 
-
 class FormattedText(BaseModel):
     text: str
     bold: Optional[bool] = None
@@ -48,7 +47,7 @@ class Paragraph(BaseModel):
 class Image(BaseModel):
     type: Literal["image"]
     url: str
-    caption: Optional[str] = None
+    caption: Optional[Union[str, List[Union[str, FormattedText]]]] = None
     width: Optional[str] = None
     ref: Optional[str] = None
 
@@ -65,6 +64,14 @@ class DocumentList(BaseModel):
     items: List[Union[str, List[TextContent]]]
 
 class Placeholders(BaseModel):
+    Title: Optional[Union[str, List[Union[str, FormattedText]]]] = None
+    Subtitle: Optional[str] = None
+    Subtitle2: Optional[str] = None
+    Year: Optional[str] = None
+    ProjectNumber: Optional[str] = None
+    ReportNumber: Optional[str] = None
+    Date: Optional[str] = None
+    # Additional placeholder fields if needed
     RecipientName: Optional[str] = None
     RecipientJobTitle: Optional[str] = None
     CompanyName: Optional[str] = None
@@ -72,12 +79,11 @@ class Placeholders(BaseModel):
     CompanyAddress2: Optional[str] = None
     CompanyCity: Optional[str] = None
     CompanyPostcode: Optional[str] = None
-    Date: Optional[str] = None
     AuthorName: Optional[str] = None
     AuthorJobTitle: Optional[str] = None
 
 class DocumentContent(BaseModel):
-    documentContent: ClassVar[List[Union[Heading, Paragraph, Image, Table, DocumentList, Math]]]
+    documentContent: ClassVar[List[Union[Heading, Paragraph, Image, Table, DocumentList, Math, Code]]]
 
 class PapermillDocument(DocumentContent):
     layoutId: str
