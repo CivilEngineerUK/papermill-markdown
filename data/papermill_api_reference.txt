@@ -1,0 +1,585 @@
+Paragraphs
+Paragraphs will most likely make up the bulk of your document, and the most basic paragraph has a simple representation in our API. Paragraphs can also be formatted by providing additional information with the text.
+Simple paragraph
+Paragraphs only have a "text" property. A simple paragraph can be created by providing a string to the "text" property.
+Document content:
+[
+  {
+    "type": "paragraph",
+    "text": "Providing raw strings to a paragraph's \"text\" property will allow easy creation of paragraphs. Papermill will handle all the typesetting for you."
+  }
+]
+Formatted paragraph
+A paragraphs' "text" property also allows formatting of text. By switching from a string to an array, you can provide objects which contain information for formatting text.
+Document content:
+[
+  {
+    "type": "paragraph",
+    "text": [
+      "Text can be formatted by providing an array of objects ",
+      "instead of a simple string. We currently support the following: ",
+      {
+        "bold": true,
+        "text": "Bold, "
+      },
+      {
+        "italic": true,
+        "text": "Italic, "
+      },
+      {
+        "underline": true,
+        "text": "Underlined, "
+      },
+      {
+        "superscript": true,
+        "text": "Superscript"
+      },
+      ", ",
+      {
+        "subscript": true,
+        "text": "Subscript"
+      },
+      ", and ",
+      {
+        "url": "https://docs.papermill.io/",
+        "text": "hyperlinks"
+      },
+      ". Marks can also be combined, such as ",
+      {
+        "bold": true,
+        "italic": true,
+        "text": "BoldItalic."
+      }
+    ]
+  }
+]
+Footnotes
+We can also include footnotes in paragraphs using the "footnote" type. Footnotes are automatically numbered and placed at the bottom of the page.
+Document content:
+[
+  {
+    "type": "paragraph",
+    "text": [
+      "This is a paragraph that ends with a footnote",
+      {
+        "type": "footnote",
+        "text": "This is a footnote"
+      }
+    ]
+  }
+]
+Headings
+Headings are used to group parts of your document into sections. They can be used to automatically generate a contents page, or for cross referencing an area of your document in another location.
+Simple headings
+Headings have a "level" property which defines the structure level of the heading. The value of "level" starts at 1 being the highest level, and 5 being the lowest level. If we want to generate a top level heading, followed by a second level heading, we could use the following:
+Document content:
+[
+  {
+    "type": "heading",
+    "text": "Papermill Structuring",
+    "level": 1
+  },
+  {
+    "type": "heading",
+    "text": "A brief introduction",
+    "level": 2
+  }
+]
+Heading levels
+To see every type of heading, we could use the following input as "documentContent" to the API:
+Document content:
+[
+  {
+    "type": "heading",
+    "text": "Heading 1",
+    "level": 1
+  },
+  {
+    "type": "heading",
+    "text": "Heading 2",
+    "level": 2
+  },
+  {
+    "type": "heading",
+    "text": "Heading 3",
+    "level": 3
+  },
+  {
+    "type": "heading",
+    "text": "Heading 4",
+    "level": 4
+  },
+  {
+    "type": "heading",
+    "text": "Heading 5",
+    "level": 5
+  }
+]
+Heading cross reference
+It is also possible to cross reference your headings in another section by adding a "ref" property to a heading, and using a cross reference element in a paragraph. This is how that would looks:
+Document content:
+[
+  {
+    "type": "heading",
+    "text": "Papermill Structuring",
+    "level": 1
+  },
+  {
+    "type": "heading",
+    "text": "A brief introduction",
+    "level": 2,
+    "ref": "brief-intro"
+  },
+  {
+    "type": "paragraph",
+    "text": "Section content to demonstrate a cross reference to another heading."
+  },
+  {
+    "type": "heading",
+    "text": "A second section",
+    "level": 2
+  },
+  {
+    "type": "paragraph",
+    "text": [
+      "Actually, I think I preferred the content of ",
+      {
+        "type": "crossReference",
+        "ref": "brief-intro"
+      }
+    ]
+  }
+]
+Heading numbering
+Headings also have a boolean "numbered" property. Setting "numbered" to false will stop heading counter increments. This is useful for headings to appear out of the flow of the document.
+Document content:
+[
+  {
+    "type": "heading",
+    "text": "Preface",
+    "level": 1,
+    "numbered": false
+  },
+  {
+    "type": "paragraph",
+    "text": "Providing raw strings to a paragraph's \"text\" property will allow easy creation of paragraphs. Papermill will handle all the typesetting for you."
+  },
+  {
+    "type": "heading",
+    "text": "Introduction",
+    "level": 1
+  }
+]
+Lists
+Lists are useful for consecutively displaying a number of connected items. A list can also contain another list, which can be useful when grouping items.
+Bullet list
+Lists have an "items" property and a "style" property. We want to pass the style as "bullet" for a bullet-point list. A simple list can take an array of strings as its items.
+Document content:
+[
+  {
+    "type": "list",
+    "style": "bullet",
+    "items": [
+      "Bullet lists in Papermill are easy to construct;",
+      "Each item of the \"items\" property is a new bullet point;",
+      "Add as many bullet points as you require."
+    ]
+  }
+]
+Numbered list
+Lists have an "items" property and a "style" property. We want to pass the style as "bullet" for a bullet-point list. A simple list can take an array of strings as its items.
+Document content:
+[
+  {
+    "type": "list",
+    "style": "number",
+    "items": [
+      "Numbered lists in Papermill are just as easy to construct;",
+      "Each item of the \"items\" property is a new point;",
+      "Add as many points as you require."
+    ]
+  }
+]
+List of lists
+The items of the "items" property can be a list itself, which increases the level of the list by one.
+Document content:
+[
+  {
+    "type": "list",
+    "style": "bullet",
+    "items": [
+      "Bullet lists in Papermill are easy to construct;",
+      "Each item of the \"items\" property is a new bullet point;",
+      {
+        "type": "list",
+        "style": "bullet",
+        "items": [
+          "We can even add a list inside itself by making an \"item\" of type list"
+        ]
+      },
+      "Add as many bullet points as you require."
+    ]
+  }
+]
+Formatting list contents
+The items of a list are similar to the "text" property of a paragraph. Each item also allows formatting. By switching from a string to an array, you can provide objects which contain information for formatting text.
+Document content:
+[
+  {
+    "type": "list",
+    "style": "number",
+    "items": [
+      "Numbered lists in Papermill are just as easy to construct;",
+      "Each item of the \"items\" property is a new point;",
+      [
+        "As with paragraphs, we can also include formatting here, such as ",
+        {
+          "bold": true,
+          "text": "Bold, "
+        },
+        {
+          "italic": true,
+          "text": "Italic, "
+        },
+        "and combinations like ",
+        {
+          "bold": true,
+          "italic": true,
+          "text": "BoldItalic."
+        }
+      ]
+    ]
+  }
+]
+Images
+Image figures can be created by Papermill by providing a URL to the image you want to appear in your document.
+Simple image figure
+An image figure requires a URL. For this example, we'll use the Papermill login splash at https://app.papermill.io/images/splash.png.It's also good practice to include captions for your image figures so we'll provide a "captions" property explaining what the image figure is.
+Document content:
+[
+  {
+    "type": "image",
+    "url": "https://app.papermill.io/images/splash.png",
+    "caption": "The Papermill login splash"
+  }
+]
+Image width
+The above image is far too big! Let's make it 40% of the width of the content space in the document.
+Document content:
+[
+  {
+    "type": "image",
+    "url": "https://app.papermill.io/images/splash.png",
+    "caption": "The Papermill login splash",
+    "width": "40"
+  }
+]
+Cross reference
+Now we're happy with our image figure, we can cross reference the figure in the document's content. For this, we first need to give the image a "ref" unique ID. Then, we can use a cross reference to automatically insert the figure number into the text.
+Document content:
+[
+  {
+    "type": "image",
+    "url": "https://app.papermill.io/images/splash.png",
+    "caption": "The Papermill login splash",
+    "width": "40",
+    "ref": "papermill-splash"
+  },
+  {
+    "type": "paragraph",
+    "text": [
+      "This document is an example showing adding an image figure and reference to a document. ",
+      "See ",
+      {
+        "type": "crossReference",
+        "ref": "papermill-splash"
+      },
+      " for an example image figure."
+    ]
+  }
+]
+Tables
+Papermill will handle most of the complexities behind tables. Currently, we assume that every table has a header, and a body. The header contains the titles for the content in the body of the table, and the body contains all the table table.
+Simple table
+To create a table, you need to provide two properties: "header" and "body". The shape of the table needs to be square (length of "header" needs to equal the length of each array in "body"). This is enough to render a simple table, but it's also good practice to provide a caption.
+Document content:
+[
+  {
+    "type": "table",
+    "header": [
+      "Name",
+      "Age"
+    ],
+    "body": [
+      [
+        "Joe",
+        "54"
+      ],
+      [
+        "Fred",
+        "29"
+      ]
+    ],
+    "caption": "Two random users of the website"
+  }
+]
+Auto column width calculation
+Papermill will automatically resize columns using a content-aware algorithm to make the most of the available space on the page. When we add an email field to the above table, we shrink the "name" and "age" columns to make room for the much bigger email field.
+Document content:
+[
+  {
+    "type": "table",
+    "header": [
+      "Name",
+      "Age",
+      "Email"
+    ],
+    "body": [
+      [
+        "Joe",
+        "54",
+        "joe@example.com"
+      ],
+      [
+        "Fred",
+        "29",
+        "fred@example.com"
+      ]
+    ]
+  }
+]
+Table transposing
+Even with the auto-resize column algorithm, it's still possible that a table is too big to fit on the page. If we add three more columns to the above table, then contents are just too big and Papermill will start word-break wrapping. For wide table data, it may be better to transpose the table.
+Document content:
+[
+  {
+    "type": "table",
+    "header": [
+      "Name",
+      "Age",
+      "Email",
+      "ID",
+      "Last login",
+      "Sessions"
+    ],
+    "body": [
+      [
+        "Joe",
+        "54",
+        "joe@example.com",
+        "JOE023881",
+        "18 Oct 2023",
+        "21"
+      ],
+      [
+        "Fred",
+        "29",
+        "fred@example.com",
+        "FRED21183",
+        "13 Sept 2023",
+        "5"
+      ]
+    ],
+    "transpose": true
+  }
+]
+
+Content Flow/Breaks
+{
+  "placeholders": {},
+  "documentContent": [
+    {
+      "type": "heading",
+      "text": "Content Flow",
+      "level": 1
+    },
+    {
+      "type": "paragraph",
+      "text": "We can take control of a document's flow of content by passing objects at the correct place."
+    },
+    {
+      "type": "heading",
+      "text": "Break",
+      "level": 2
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "Breaks behave differently depending on whether you're in a multi-column or single column layout. We can add a break to a document by passing in ",
+        {
+          "code": true,
+          "text": "{ \"type\": \"break\" }"
+        },
+        " to the ",
+        {
+          "code": true,
+          "text": "documentContent"
+        },
+        "."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "In a multi-column layout, a break will move proceeding content to the next column. In a single column layout, a break will move content to the next page. Let's break this page here and add a table to the next page:"
+      ]
+    },
+    {
+      "type": "break"
+    },
+    {
+      "type": "table",
+      "header": [
+        "Header 1",
+        "Header 2"
+      ],
+      "body": [
+        [
+          "Table cell 1",
+          "Table cell 2"
+        ]
+      ]
+    },
+    {
+      "type": "code",
+      "text": [
+        "{ \"type\": \"break\" }\n",
+        "{\n",
+        "  \"type\": \"table\",\n",
+        "  \"header\": [\"Header 1\", \"Header 2\"],\n",
+        "  \"body\": [\n",
+        "    [\"Table cell 1\", \"Table cell 2\"]\n",
+        "  ]\n",
+        "}\n"
+      ]
+    }
+  ],
+  "layoutId": "3a7pG16FNc5LXK1ZNgJw"
+}
+{
+  "placeholders": {},
+  "documentContent": [
+    {
+      "type": "heading",
+      "text": "Equations",
+      "level": 1
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "Papermill can render equations in a PDF using the ",
+        {
+          "code": true,
+          "text": "{ \"type\": \"equation\" }"
+        },
+        " node. For example we can render the pythagorean theorem as follows:"
+      ]
+    },
+    {
+      "type": "equation",
+      "equation": "a^2 + b^2 = c^2"
+    },
+    {
+      "type": "code",
+      "text": [
+        "{\n",
+        "  \"type\": \"equation\",\n",
+        "  \"equation\": \"a^2 + b^2 = c^2\"\n",
+        "}"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "When rendering equations, we need to ensure that the backslash character is escaped. This is because the backslash character is used to escape special characters in JSON. For example, to represent the following equation ",
+        {
+          "code": true,
+          "text": "\\begin{aligned}"
+        },
+        " we need to actually send ",
+        {
+          "code": true,
+          "text": "\\\\begin{aligned}"
+        },
+        " in the JSON payload."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Captions"
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "Equations will render with an equation number by default. However, if we want to add a caption to an equation, we can disable this equation number and treat the equation similar to figure. The ",
+        {
+          "code": true,
+          "text": "{ \"caption\": \"\" }"
+        },
+        " property allows this to happen."
+      ]
+    },
+    {
+      "type": "equation",
+      "equation": "\\begin{aligned}T( (v_1 + v_2) \\otimes w )&= T( (v_1 \\otimes w) + (v_2 \\otimes w) ) \\\\&= T(v_1 \\otimes w) + T(v_2 \\otimes w)\\end{aligned}",
+      "caption": "This equation is treated like a figure"
+    },
+    {
+      "type": "code",
+      "text": [
+        "{\n",
+        "  \"type\": \"equation\",\n",
+        "  \"equation\": \"\\begin{aligned}T( (v_1 + v_2) \\otimes w )&= T( (v_1 \\otimes w) + (v_2 \\otimes w) ) \\\\&= T(v_1 \\otimes w) + T(v_2 \\otimes w)\\end{aligned}\",\n",
+        "  \"caption\": \"This equation is treated like a figure\"\n",
+        "}"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "We can also cross reference equations similar to figures. If we give an equation the ",
+        {
+          "code": true,
+          "text": "{ \"ref\": \"\" }"
+        },
+        " property, we can link to the equation."
+      ]
+    },
+    {
+      "type": "equation",
+      "equation": "\\begin{align*}\\\\ax^2+bx&=-c,\\\\x^2+\\frac{b}{a}x&=-\\frac{c}{a},\\\\x^2+\\frac{b}{a}x+\\frac{b^2}{4a^2}&=-\\frac{c}{a}+\\frac{b^2}{4a^2},\\\\\\Bigg(x+\\frac{b}{2a}\\Bigg)^2&=-\\frac{4ac}{4a^2}+\\frac{b^2}{4a^2},\\\\x+\\frac{b}{2a}&=\\pm\\sqrt[]{\\frac{b-4ac}{4a^2}}\\\\x&=\\frac{-b\\pm\\sqrt[]{b^2-4ac}}{2a}\\end{align*}",
+      "ref": "QuadraticFormula"
+    },
+    {
+      "type": "paragraph",
+      "style": "preview",
+      "text": [
+        {
+          "type": "crossReference",
+          "ref": "QuadraticFormula"
+        },
+        " shows the proof of the quadratic formula."
+      ]
+    },
+    {
+      "type": "code",
+      "text": [
+        "{\n",
+        "  \"type\": \"equation\",\n",
+        "  \"equation\": \"\\begin{align*}\\\\ax^2+bx&=-c,\\\\x^2+\\frac{b}{a}x&=-\\frac{c}{a},\\\\x^2+\\frac{b}{a}x+\\frac{b^2}{4a^2}&=-\\frac{c}{a}+\\frac{b^2}{4a^2},\\\\\\Bigg(x+\\frac{b}{2a}\\Bigg)^2&=-\\frac{4ac}{4a^2}+\\frac{b^2}{4a^2},\\\\x+\\frac{b}{2a}&=\\pm\\sqrt[]{\\frac{b-4ac}{4a^2}}\\\\x&=\\frac{-b\\pm\\sqrt[]{b^2-4ac}}{2a}\\end{align*}\",\n",
+        "  \"ref\": \"QuadraticFormula\"\n",
+        "}\n",
+        "\n",
+        "{\n",
+        "  \"type\": \"paragraph\",\n",
+        "  \"text\": [\n",
+        "    { \"type\": \"crossReference\", \"ref\": \"QuadraticFormula\" },\n",
+        "    \" shows the proof of the quadratic formula.\"\n",
+        "  ]\n",
+        "}"
+      ]
+    }
+  ],
+  "layoutId": "3a7pG16FNc5LXK1ZNgJw"
+}

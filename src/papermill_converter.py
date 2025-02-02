@@ -7,14 +7,17 @@ import base64
 from typing import List, Dict, Union, Tuple, Optional
 from urllib.parse import unquote
 
+
 class MarkdownToPapermill:
+    # Regular expression patterns
     HEADING_PATTERN = re.compile(r'^(#{1,6})\s*(.*)')
     FOOTNOTE_DEF_PATTERN = re.compile(r'\[\^(\d+)\]:\s*([^\n]+)')
     FOOTNOTE_REF_PATTERN = re.compile(r'\[\^(\d+)\]')
     CAPTION_PATTERN = re.compile(r'^(?:Table|Tab|TABLE|TAB)\.?\s*\d+', re.IGNORECASE)
     FIGURE_PATTERN = re.compile(r'^(?:Figure|Fig|FIGURE|FIG)\.?\s*\d+', re.IGNORECASE)
     REFERENCE_SECTION_PATTERNS = [
-        re.compile(r'^#{0,6}\s*(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$', re.IGNORECASE),
+        re.compile(r'^#{0,6}\s*(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$',
+                   re.IGNORECASE),
         re.compile(r'^(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$', re.IGNORECASE)
     ]
     REFERENCE_LINE_PATTERNS = [
@@ -39,11 +42,9 @@ class MarkdownToPapermill:
         'hyperlink': re.compile(r'\[(?!\^|ref:)(.+?)\]\((.+?)\)')
     }
 
-    # Block math patterns (to be converted to 'equation')
+    # Math patterns
     BLOCK_MATH_START_PATTERN = re.compile(r'^\$\$\s*$')
     BLOCK_MATH_END_PATTERN = re.compile(r'^\$\$\s*$')
-
-    # Inline math pattern (using $...$)
     INLINE_MATH_PATTERN = re.compile(r'\$(.+?)\$')
 
     def __init__(self, numbered: bool = True):
@@ -51,7 +52,7 @@ class MarkdownToPapermill:
         self.numbered = numbered
 
     def convert(self, markdown_text: str) -> List[Dict]:
-        # Normalize Unicode and fix encoding issues
+        # Normalize Unicode and apply simple replacements.
         markdown_text = unicodedata.normalize('NFC', markdown_text)
         replacements = {
             'Â£': '£',
@@ -66,9 +67,8 @@ class MarkdownToPapermill:
         for k, v in replacements.items():
             markdown_text = markdown_text.replace(k, v)
 
-        # Extract and remove footnote definitions; mark references in text
+        # Process footnotes
         markdown_text, self.footnotes = self._process_footnotes(markdown_text)
-
         lines = markdown_text.split('\n')
         result = []
         buffer = []
@@ -76,44 +76,44 @@ class MarkdownToPapermill:
 
         # Identify caption lines to skip
         for idx, line in enumerate(lines):
-            line = line.strip()
-            if self.CAPTION_PATTERN.match(line) or self.FIGURE_PATTERN.match(line):
+            if self.CAPTION_PATTERN.match(line.strip()) or self.FIGURE_PATTERN.match(line.strip()):
                 skip_lines.add(idx)
 
+        empty_count = 0  # Count consecutive empty lines for breaks
         i = 0
         while i < len(lines):
             line = lines[i].strip()
 
-            # Handle block math delimited by $$
+            # Block math
             if self.BLOCK_MATH_START_PATTERN.match(line):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
                 i += 1
-                block_math_content = []
+                block_lines = []
                 while i < len(lines) and not self.BLOCK_MATH_END_PATTERN.match(lines[i].strip()):
-                    block_math_content.append(lines[i])
+                    block_lines.append(lines[i])
                     i += 1
                 i += 1  # Skip closing $$
-                math_text = '\n'.join(block_math_content).strip()
-                if math_text:
-                    # Produce a block equation with property "equation"
-                    result.append({"type": "equation", "equation": math_text})
+                eq_text = "\n".join(block_lines).strip()
+                if eq_text:
+                    result.append({"type": "equation", "equation": eq_text})
+                empty_count = 0
                 continue
 
-            # Handle code blocks delimited by ```
-            if line.startswith('```'):
+            # Code blocks
+            if line.startswith("```"):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
                 i += 1
                 code_lines = []
-                while i < len(lines) and not lines[i].strip().startswith('```'):
+                while i < len(lines) and not lines[i].strip().startswith("```"):
                     code_lines.append(lines[i])
                     i += 1
                 i += 1  # Skip closing ```
-                code_text = "\n".join(code_lines)
-                result.append({"type": "code", "text": code_text})
+                result.append({"type": "code", "text": "\n".join(code_lines)})
+                empty_count = 0
                 continue
 
             # Skip caption lines
@@ -121,98 +121,74 @@ class MarkdownToPapermill:
                 i += 1
                 continue
 
-            # Process reference section headings
-            if self._is_reference_section_heading(line):
-                if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
-                    buffer = []
-                heading = self._process_heading(line if line.startswith('#') else f'## {line}')
-                result.append(heading)
-                i += 1
-                while i < len(lines) and not lines[i].strip():
-                    i += 1
-                while i < len(lines):
-                    ref_line = lines[i].strip()
-                    if not ref_line or ref_line.startswith('#'):
-                        break
-                    if self._is_reference_line(ref_line):
-                        result.append({
-                            "type": "paragraph",
-                            "text": [ref_line]
-                        })
-                    i += 1
-                continue
-
-            # Paragraph break on empty line
+            # Empty line handling: require three consecutive newlines for a break.
             if not line:
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
+                empty_count += 1
+                if empty_count >= 3:
+                    result.append({"type": "break"})
+                    empty_count = 0
                 i += 1
                 continue
+            else:
+                empty_count = 0
 
             # Headings
-            heading_match = self.HEADING_PATTERN.match(line)
-            if heading_match:
+            if self.HEADING_PATTERN.match(line):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
-                heading = self._process_heading(line)
-                result.append(heading)
+                result.append(self._process_heading(line))
                 i += 1
                 continue
 
-            # Lists (numbered or bullet)
+            # Lists (process inline math in list items)
             if self.LIST_ITEM_PATTERN.match(line):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
                 i = self._process_list(lines, i, result)
                 continue
 
             # Images
-            if line.startswith('!['):
+            if line.startswith("!["):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
                 image_obj, i = self._process_image(line, lines, i)
                 result.append(image_obj)
                 continue
 
-            # Tables (lines starting with |)
-            if line.startswith('|'):
+            # Tables
+            if line.startswith("|"):
                 if buffer:
-                    result.append(self._process_paragraph(' '.join(buffer)))
+                    result.append(self._process_paragraph(" ".join(buffer)))
                     buffer = []
                 i = self._process_table(lines, i, result)
                 continue
 
-            # Regular text line
+            # Otherwise, accumulate text.
             buffer.append(line)
             i += 1
 
         if buffer:
-            result.append(self._process_paragraph(' '.join(buffer)))
+            result.append(self._process_paragraph(" ".join(buffer)))
         return result
 
     def _process_heading(self, line: str) -> Dict:
-        match = self.HEADING_PATTERN.match(line)
-        if not match:
+        m = self.HEADING_PATTERN.match(line)
+        if not m:
             return {}
-        hashes, text = match.groups()
+        hashes, text = m.groups()
         level = min(len(hashes), 5)
         ref = None
-        # Look for a trailing reference marker, e.g., "Heading text [ref:my-ref]"
-        ref_match = re.search(r'\s*\[ref:([^\]]+)\]\s*$', text)
-        if ref_match:
-            ref = ref_match.group(1).strip()
-            text = text[:ref_match.start()].strip()
-        heading_obj = {
-            "type": "heading",
-            "text": text.strip(),
-            "level": level,
-            "numbered": self.numbered
-        }
+        ref_m = re.search(r'\s*\[ref:([^\]]+)\]\s*$', text)
+        if ref_m:
+            ref = ref_m.group(1).strip()
+            text = text[:ref_m.start()].strip()
+        heading_obj = {"type": "heading", "text": text, "level": level, "numbered": self.numbered}
         if ref:
             heading_obj["ref"] = ref
         return heading_obj
@@ -222,264 +198,202 @@ class MarkdownToPapermill:
         i = start_idx
         first_line = lines[i].strip()
         is_numbered = first_line and first_line[0].isdigit()
-
         while i < len(lines):
             line = lines[i].strip()
             if not line:
                 break
-            match = self.LIST_ITEM_PATTERN.match(line)
-            if match:
-                if is_numbered and match.group(1):
+            m = self.LIST_ITEM_PATTERN.match(line)
+            if m:
+                if is_numbered and m.group(1):
                     text = line[line.find('.') + 1:].strip()
-                elif not is_numbered and match.group(2):
+                elif not is_numbered and m.group(2):
                     text = line[2:].strip()
                 else:
                     break
-                item_tokens = self._process_inline_formatting(text)
-                if isinstance(item_tokens, list):
-                    items.append(item_tokens)
-                else:
-                    items.append([item_tokens])
+                tokens = self._process_inline_math_and_formatting(text)
+                items.append(tokens if isinstance(tokens, list) else [tokens])
                 i += 1
             else:
                 break
-
-        result.append({
-            "type": "list",
-            "style": "number" if is_numbered else "bullet",
-            "items": items
-        })
+        result.append({"type": "list", "style": "number" if is_numbered else "bullet", "items": items})
         return i
 
-    def _clean_caption_text(self, raw_caption: str) -> str:
-        if not raw_caption:
-            return ""
-        match = re.match(r'^(?:Table|Tab|TABLE|TAB|Figure|Fig|FIGURE|FIG)\.?\s*\d+(?:\.\d+)*\s*[-:~]?\s*(.*)', raw_caption, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-        return raw_caption.strip()
-
-    def _find_caption(self, lines: List[str], start_idx: int, prefix_patterns: List[str]) -> Tuple[Optional[str], int]:
-        # Look before content
-        for idx in range(max(0, start_idx - 2), start_idx):
-            line = lines[idx].strip()
-            for pattern in prefix_patterns:
-                if re.match(f'^{pattern}\.?\s*\d+', line, re.IGNORECASE):
-                    return self._clean_caption_text(line), start_idx
-        # Look after content
-        for idx in range(start_idx + 1, min(len(lines), start_idx + 3)):
-            line = lines[idx].strip()
-            for pattern in prefix_patterns:
-                if re.match(f'^{pattern}\.?\s*\d+', line, re.IGNORECASE):
-                    return self._clean_caption_text(line), idx + 1
-        return None, start_idx
-
-    def _process_table(self, lines: List[str], start_idx: int, result: List) -> int:
-        caption, i = self._find_caption(lines, start_idx, ['Table', 'Tab', 'TABLE', 'TAB'])
-        if i >= len(lines) or not lines[i].strip().startswith('|'):
-            return i
-
-        # Process header row
-        header_line = lines[i].strip()
-        header_cells = [cell.strip() for cell in header_line.split('|')[1:-1]]
-        i += 1
-
-        # Skip separator row if present
-        if i < len(lines) and re.match(r'^\|(?:\s*[-:]+\s*\|)+', lines[i].strip()):
-            i += 1
-
-        # Process table body
-        body = []
-        while i < len(lines):
-            line = lines[i].strip()
-            if not line.startswith('|'):
-                break
-            cells = [cell.strip() for cell in line.split('|')[1:-1]]
-            body.append(cells)
-            i += 1
-
-        if not caption:
-            caption, i = self._find_caption(lines, i, ['Table', 'Tab', 'TABLE', 'TAB'])
-        table_obj = {
-            "type": "table",
-            "header": header_cells,
-            "body": body,
-            "caption": caption or ""
-        }
-        result.append(table_obj)
-        return i
-
-    def _process_image(self, line: str, lines: List[str], current_idx: int) -> Tuple[Dict, int]:
-        alt_text_match = re.search(r'!\[(.*?)\]', line)
-        url_title_match = re.search(r'\((.*?)\)', line)
+    def _process_image(self, line: str, lines: List[str], idx: int) -> Tuple[Dict, int]:
+        alt_m = re.search(r'!\[(.*?)\]', line)
+        url_m = re.search(r'\((.*?)\)', line)
         image_obj = {"type": "image"}
-
-        if not alt_text_match or not url_title_match:
-            return image_obj, current_idx + 1
-
-        alt_text = alt_text_match.group(1).strip()
-        url_title = url_title_match.group(1).strip()
-
-        title_match = re.search(r'^(.*?)\s+"(.*?)"$', url_title)
-        if title_match:
-            image_url = title_match.group(1).strip()
-            title_str = title_match.group(2).strip()
+        if not alt_m or not url_m:
+            return image_obj, idx + 1
+        alt_text = alt_m.group(1).strip()
+        url_title = url_m.group(1).strip()
+        title_m = re.search(r'^(.*?)\s+"(.*?)"$', url_title)
+        if title_m:
+            image_url = title_m.group(1).strip()
+            title_str = title_m.group(2).strip()
         else:
             image_url = url_title
             title_str = None
-
-        image_url = self._handle_image_url(image_url)
-        image_obj["url"] = image_url
-
+        image_obj["url"] = self._handle_image_url(image_url)
         if alt_text:
             image_obj["caption"] = alt_text
-
         if title_str:
-            attrs = [attr.strip() for attr in title_str.split(',')]
-            for attr in attrs:
+            for attr in [a.strip() for a in title_str.split(',')]:
                 if '=' in attr:
-                    k, v = attr.split('=', 1)
-                    k = k.strip()
-                    v = v.strip()
+                    k, v = [s.strip() for s in attr.split('=', 1)]
                     if k == 'caption':
-                        image_obj['caption'] = v
+                        image_obj["caption"] = v
                     elif k == 'ref':
-                        image_obj['ref'] = v
+                        image_obj["ref"] = v
                     elif k == 'width':
-                        image_obj['width'] = v
-                else:
-                    if attr == 'fullWidth':
-                        image_obj['fullWidth'] = True
+                        image_obj["width"] = v
+                elif attr == "fullWidth":
+                    image_obj["fullWidth"] = True
+        return image_obj, idx + 1
 
-        return image_obj, current_idx + 1
-
-    def _handle_image_url(self, image_url: str) -> str:
-        if image_url.startswith('http') or image_url.startswith('data:image/'):
-            return image_url
-        local_path = unquote(image_url)
-        if os.path.exists(local_path) and os.path.isfile(local_path):
-            ext = os.path.splitext(local_path.lower())[1]
-            if ext in ['.png']:
-                mime = 'image/png'
-            elif ext in ['.jpg', '.jpeg']:
-                mime = 'image/jpeg'
-            elif ext in ['.gif']:
-                mime = 'image/gif'
-            else:
-                mime = 'image/png'
-            with open(local_path, 'rb') as f:
+    def _handle_image_url(self, url: str) -> str:
+        if url.startswith("http") or url.startswith("data:image/"):
+            return url
+        local = unquote(url)
+        if os.path.exists(local) and os.path.isfile(local):
+            ext = os.path.splitext(local.lower())[1]
+            mime = "image/png"
+            if ext in [".jpg", ".jpeg"]:
+                mime = "image/jpeg"
+            elif ext == ".gif":
+                mime = "image/gif"
+            with open(local, "rb") as f:
                 data = f.read()
-            b64 = base64.b64encode(data).decode('utf-8')
+            b64 = base64.b64encode(data).decode("utf-8")
             return f"data:{mime};base64,{b64}"
-        else:
-            return image_url
+        return url
+
+    def _process_table(self, lines: List[str], start_idx: int, result: List) -> int:
+        caption, i = self._find_caption(lines, start_idx, ["Table", "Tab", "TABLE", "TAB"])
+        if i >= len(lines) or not lines[i].strip().startswith("|"):
+            return i
+        header_line = lines[i].strip()
+        header_cells = [cell.strip() for cell in header_line.split("|")[1:-1]]
+        i += 1
+        if i < len(lines) and re.match(r'^\|(?:\s*[-:]+\s*\|)+', lines[i].strip()):
+            i += 1
+        body = []
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line.startswith("|"):
+                break
+            cells = [cell.strip() for cell in line.split("|")[1:-1]]
+            body.append(cells)
+            i += 1
+        if not caption:
+            caption, i = self._find_caption(lines, i, ["Table", "Tab", "TABLE", "TAB"])
+        table_obj = {"type": "table", "header": header_cells, "body": body, "caption": caption or ""}
+        result.append(table_obj)
+        return i
+
+    def _find_caption(self, lines: List[str], start_idx: int, prefixes: List[str]) -> Tuple[Optional[str], int]:
+        for idx in range(max(0, start_idx - 2), start_idx):
+            l = lines[idx].strip()
+            for p in prefixes:
+                if re.match(fr'^{p}\.?\s*\d+', l, re.IGNORECASE):
+                    return self._clean_caption(l), start_idx
+        for idx in range(start_idx + 1, min(len(lines), start_idx + 3)):
+            l = lines[idx].strip()
+            for p in prefixes:
+                if re.match(fr'^{p}\.?\s*\d+', l, re.IGNORECASE):
+                    return self._clean_caption(l), idx + 1
+        return None, start_idx
+
+    def _clean_caption(self, text: str) -> str:
+        m = re.match(r'^(?:Table|Tab|TABLE|TAB|Figure|Fig|FIGURE|FIG)\.?\s*\d+(?:\.\d+)*\s*[-:~]?\s*(.*)', text,
+                     re.IGNORECASE)
+        return m.group(1).strip() if m else text.strip()
 
     def _process_footnotes(self, text: str) -> Tuple[str, Dict[str, str]]:
         footnotes = {}
-        def replace_definition(m):
-            footnote_id, content = m.groups()
-            footnotes[footnote_id] = content.strip()
-            return ''
-        text = self.FOOTNOTE_DEF_PATTERN.sub(replace_definition, text)
+
+        def repl(m):
+            footnotes[m.group(1)] = m.group(2).strip()
+            return ""
+
+        text = self.FOOTNOTE_DEF_PATTERN.sub(repl, text)
         text = self.FOOTNOTE_REF_PATTERN.sub(lambda m: f"__FOOTNOTE__{m.group(1)}__", text)
         return text, footnotes
 
     def _process_paragraph(self, text: str) -> Dict:
         if not text:
             return {"type": "paragraph", "text": []}
-        parts = text.split('__FOOTNOTE__')
-        result = []
+        parts = text.split("__FOOTNOTE__")
+        content = []
         for part in parts:
-            if '__' in part:
-                footnote_id, remaining = part.split('__', 1)
-                result.append({"type": "footnote", "text": self.footnotes.get(footnote_id, "")})
-                if remaining:
-                    formatted = self._process_inline_math_and_formatting(remaining.strip())
-                    if isinstance(formatted, list):
-                        result.extend(formatted)
-                    elif formatted:
-                        result.append(formatted)
+            if "__" in part:
+                fid, rem = part.split("__", 1)
+                content.append({"type": "footnote", "text": self.footnotes.get(fid, "")})
+                if rem:
+                    tokens = self._process_inline_math_and_formatting(rem.strip())
+                    if tokens:
+                        content.extend(tokens if isinstance(tokens, list) else [tokens])
             else:
-                formatted = self._process_inline_math_and_formatting(part.strip())
-                if isinstance(formatted, list):
-                    result.extend(formatted)
-                elif formatted:
-                    result.append(formatted)
-        return {"type": "paragraph", "text": result if result else [""]}
+                tokens = self._process_inline_math_and_formatting(part.strip())
+                if tokens:
+                    content.extend(tokens if isinstance(tokens, list) else [tokens])
+        return {"type": "paragraph", "text": content if content else [""]}
 
     def _process_inline_math_and_formatting(self, text: str) -> Union[str, List]:
         segments = []
-        last_pos = 0
+        last = 0
         for m in self.INLINE_MATH_PATTERN.finditer(text):
-            if m.start() > last_pos:
-                before = text[last_pos:m.start()]
-                segments.append(self._process_inline_formatting(before))
-            math_content = m.group(1).strip()
-            # Produce an inline equation with property "equation"
-            segments.append({"type": "equation", "equation": math_content})
-            last_pos = m.end()
-        if last_pos < len(text):
-            trailing = text[last_pos:]
-            segments.append(self._process_inline_formatting(trailing))
-        flattened = []
+            if m.start() > last:
+                segments.append(self._process_inline_formatting(text[last:m.start()]))
+            segments.append({"type": "equation", "equation": m.group(1).strip()})
+            last = m.end()
+        if last < len(text):
+            segments.append(self._process_inline_formatting(text[last:]))
+        flat = []
         for seg in segments:
             if isinstance(seg, list):
-                flattened.extend(seg)
+                flat.extend(seg)
             elif seg:
-                flattened.append(seg)
-        return flattened if len(flattened) > 1 else (flattened[0] if flattened else "")
+                flat.append(seg)
+        return flat if len(flat) > 1 else (flat[0] if flat else "")
 
     def _process_inline_formatting(self, text: str) -> Union[str, List]:
-        if not text:
-            return text
         tokens = []
         pos = 0
         while pos < len(text):
-            match_found = False
+            found = False
             for fmt, pattern in self.INLINE_FORMATTING_PATTERNS.items():
                 m = pattern.search(text, pos)
                 if m and m.start() == pos:
-                    val = m.group(1)
-                    token = {"text": val}
-                    if fmt == 'bold_italic':
-                        token['bold'] = True
-                        token['italic'] = True
-                    elif fmt == 'bold':
-                        token['bold'] = True
-                    elif fmt == 'italic':
-                        token['italic'] = True
-                    elif fmt == 'underline':
-                        token['underline'] = True
-                    elif fmt in ['superscript_md', 'superscript_html']:
-                        token['superscript'] = True
-                    elif fmt in ['subscript_md', 'subscript_html']:
-                        token['subscript'] = True
+                    token = {"text": m.group(1)}
+                    if fmt == "bold_italic":
+                        token["bold"] = True
+                        token["italic"] = True
+                    elif fmt == "bold":
+                        token["bold"] = True
+                    elif fmt == "italic":
+                        token["italic"] = True
+                    elif fmt == "underline":
+                        token["underline"] = True
                     tokens.append(token)
                     pos = m.end()
-                    match_found = True
+                    found = True
                     break
-            if not match_found:
-                next_positions = []
+            if not found:
+                next_pos = pos
                 for pat in self.INLINE_FORMATTING_PATTERNS.values():
-                    nm = pat.search(text, pos)
-                    if nm:
-                        next_positions.append(nm.start())
-                next_pos = min(next_positions) if next_positions else len(text)
+                    m = pat.search(text, pos)
+                    if m:
+                        next_pos = m.start() if next_pos == pos else min(next_pos, m.start())
+                if next_pos == pos:
+                    next_pos = len(text)
                 tokens.append(text[pos:next_pos])
                 pos = next_pos
-        tokens = [t for t in tokens if t != '']
+        tokens = [t for t in tokens if t != ""]
         return tokens if len(tokens) > 1 else (tokens[0] if tokens else "")
-
-    def _get_reference_label(self, ref_id: str) -> str:
-        if ref_id.startswith('fig-'):
-            return "figure"
-        elif ref_id.startswith('tbl-'):
-            return "table"
-        else:
-            return "section"
 
     def _is_reference_section_heading(self, line: str) -> bool:
         return any(pattern.match(line) for pattern in self.REFERENCE_SECTION_PATTERNS)
 
     def _is_reference_line(self, line: str) -> bool:
         return any(pattern.match(line) for pattern in self.REFERENCE_LINE_PATTERNS)
+

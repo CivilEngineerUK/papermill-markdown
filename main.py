@@ -19,6 +19,7 @@ def main():
     # Load the payload (e.g. letter.json)
     # You will get this from Papermill and will be of the following form:
     """
+    # report.json
     {
     "layoutId": "your_layout_id",
     "placeholders": {
@@ -26,7 +27,10 @@ def main():
         }
     }
     """
-    json_file_path = 'data/json_file/report.json'  # you will need to put yout json file here
+
+    # see data/json_file/letter_example.json
+
+    json_file_path = 'data/json_file/report.json'
     with open(json_file_path, 'r', encoding='utf-8') as file:
         json_body = json.load(file)
 
@@ -45,6 +49,12 @@ def main():
     # Validate the entire payload using the PapermillDocument model.
     # Extra fields (such as placeholders) are allowed.
     document = PapermillDocument.model_validate(json_body)
+
+
+    # Save the JSON payload with the same name but with a JSON extension
+    json_filepath = md_filepath.replace('.md', '.json')
+    with open(json_filepath, 'w') as file:
+        json.dump(json_body, file, indent=2)
 
     # Prepare headers
     headers = {

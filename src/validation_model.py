@@ -29,6 +29,9 @@ class Equation(BaseModel):
     type: Literal["equation"]
     equation: str
 
+class Break(BaseModel):
+    type: Literal["break"]
+
 # Union type for text content
 TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation]
 
@@ -63,11 +66,15 @@ class DocumentList(BaseModel):
     style: Literal["bullet", "number"]
     items: List[Union[str, List[TextContent]]]
 
+# Include Break in the union for document elements.
+DocumentElement = Union[Heading, Paragraph, Image, Table, DocumentList, Equation, Code, Break]
+
 class DocumentContent(BaseModel):
-    documentContent: ClassVar[List[Union[Heading, Paragraph, Image, Table, DocumentList, Equation, Code]]]
+    documentContent: ClassVar[List[DocumentElement]]
 
 class PapermillDocument(DocumentContent):
     layoutId: str
 
     class Config:
         extra = "allow"
+

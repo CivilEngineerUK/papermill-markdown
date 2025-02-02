@@ -34,6 +34,12 @@ This is a paragraph with a footnote[^1] and some more text to demonstrate paragr
 
 This is an example of inline maths: $y = mx + c$
 
+### Block Maths Example
+
+$$
+y = mx + c
+$$
+
 #### Image Example
 
 ![Example image caption](https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Vulpes_vulpes_ssp_fulvus.jpg/800px-Vulpes_vulpes_ssp_fulvus.jpg)
@@ -48,6 +54,10 @@ Table 1: Employee Information Table
 |------|-----|-------|
 | John | 30  | john@example.com |
 | Jane | 25  | jane@example.com |
+
+##### Page Break Example
+Below will be a new page for the final section buy using three newlines for a page break.
+
 
 
 ###### Final Section
