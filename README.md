@@ -17,7 +17,7 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 
 - **Example Prompt:**  
   Provides a sample Markdown file (prompt.md) that follows the Papermill style guide.
-- 
+
 # Configuration
 
 Create a `.env` file in the root directory and add your Papermill API credentials:
