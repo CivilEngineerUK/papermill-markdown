@@ -15,47 +15,48 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 - **Schema Validation:**  
   Uses Pydantic models to ensure the converted JSON adheres to the Papermill API schema.
 
-- **Example Integration:**  
-  Includes an example script to convert a Markdown file and generate a PDF through the Papermill API.
-
 - **Example Prompt:**  
   Provides a sample Markdown file (prompt.md) that follows the Papermill style guide.
 
-# Configuration
+- **Structured JSON Output:**  
+  *Not tested yet* Use the `DocumentContent` pydantic model to create structured output from an LLM.
 
-Create a `.env` file in the root directory and add your Papermill API credentials:
+# Installation 
+
+This package is not yet available on PyPI. To install it, clone the repository and install the dependencies using the following commands:
 
 ```bash
-PAPERMILL_API_KEY=your_api_key_here
-PAPERMILL_CLIENT_ID=your_client_id_here
-```
+pip install git+https://github.com/CivilEngineerUK/papermill-markdown
+````
 
 # Usage
 
-To convert a Markdown file and generate a PDF using the Papermill API, run the provided example script:
+To convert a Markdown file into JDoc follow this example.:
+This assumes that you have a Markdown file (test.md) in the data folder.
 
-```bash
-python data/example.py
+```python
+import os
+from papermill_markdown.converter import MarkdownToPapermill
+from papermill_markdown.validator import DocumentContent
+from papermill_markdown.linter import MarkdownLinter
+
+# Read the Markdown file
+md_filepath = os.path.join('data', 'test.md')  # test file
+with open(md_filepath, 'r', encoding='utf-8') as file:
+    markdown_original_text = file.read()
+
+# Lint the Markdown file
+linter = MarkdownLinter(markdown_original_text)
+open_issues, resolved_issues, markdown_text = linter.lint()
+
+# Convert Markdown to Papermill JSON content
+converter = MarkdownToPapermill(numbered=True)
+papermill_json = converter.convert(markdown_text)
+
+# Validate the entire payload using the DocumentContent model.
+document = DocumentContent.model_validate(papermill_json).model_dump()
+print(document)
 ```
-
-The script performs the following steps:
-
-- Reads the sample Markdown file (test_data_1.md).
-- Converts the Markdown content into Papermill JSON using the MarkdownToPapermill class.
-- Inserts the converted content into a JSON payload (sample payload provided in json_file/letter.json).
-- Validates the entire payload using the PapermillDocument model (extra fields, such as placeholders, are allowed).
-- Sends a POST request to the Papermill API to generate a PDF.
-- Saves the resulting PDF as output.pdf and opens it (if supported by your operating system).
-
-# Example
-
-After configuring your .env file with your API credentials, simply run:
-
-```bash
-python data/example.py
-```
-
-If successful, you will see the message "PDF generated successfully." and an output.pdf file will be created in the repository directory.
 
 # Contributing
 

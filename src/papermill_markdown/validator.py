@@ -1,8 +1,10 @@
-# src/validator.py
+# src/papermill_markdown/validator.py
 
+from pydantic import RootModel
+from typing import List, Union, Literal, Optional
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union, Literal, ClassVar
 
+# Inline content models
 class FormattedText(BaseModel):
     text: str
     bold: Optional[bool] = None
@@ -32,14 +34,14 @@ class Equation(BaseModel):
 class Break(BaseModel):
     type: Literal["break"]
 
-# Union type for text content
+# Union for inline text content
 TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation]
 
-# Document content models
+# Block element models
 class Heading(BaseModel):
     type: Literal["heading"]
     text: str
-    level: int = Field(ge=1, le=5)
+    level: int = Field(..., ge=1, le=5)
     ref: Optional[str] = None
     numbered: Optional[bool] = None
 
@@ -66,14 +68,11 @@ class DocumentList(BaseModel):
     style: Literal["bullet", "number"]
     items: List[Union[str, List[TextContent]]]
 
-# Include Break in the union for document elements.
+# Union of all document elements
 DocumentElement = Union[Heading, Paragraph, Image, Table, DocumentList, Equation, Code, Break]
 
-class DocumentContent(BaseModel):
-    documentContent: ClassVar[List[DocumentElement]]
+# Corrected validator for a documentContent payload (a list of DocumentElement)
+class DocumentContent(RootModel[List[DocumentElement]]):
+    def get_elements(self) -> List[DocumentElement]:
+        return self.__root__
 
-class PapermillDocument(DocumentContent):
-    layoutId: str
-
-    class Config:
-        extra = "allow"

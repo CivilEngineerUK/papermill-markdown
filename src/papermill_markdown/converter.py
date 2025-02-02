@@ -1,4 +1,4 @@
-# src/converter.py
+# src/papermill_markdown/converter.py
 
 import re
 import unicodedata
