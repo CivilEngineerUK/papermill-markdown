@@ -1,4 +1,4 @@
-# src/papermill_converter.py
+# src/converter.py
 
 import re
 import unicodedata
@@ -396,4 +396,5 @@ class MarkdownToPapermill:
 
     def _is_reference_line(self, line: str) -> bool:
         return any(pattern.match(line) for pattern in self.REFERENCE_LINE_PATTERNS)
+
 

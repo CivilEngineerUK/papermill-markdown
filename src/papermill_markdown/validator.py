@@ -1,4 +1,4 @@
-# src/validation_model.py
+# src/validator.py
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union, Literal, ClassVar
@@ -77,4 +77,3 @@ class PapermillDocument(DocumentContent):
 
     class Config:
         extra = "allow"
-
