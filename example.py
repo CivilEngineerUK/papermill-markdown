@@ -7,8 +7,8 @@ Note that this file will only run if you have the necessary environment variable
 import os
 import json
 import requests
-from src.papermill_converter import MarkdownToPapermill
-from src.validation_model import PapermillDocument
+from src.papermill_markdown.papermill_converter import MarkdownToPapermill
+from src.papermill_markdown.validation_model import PapermillDocument
 from dotenv import load_dotenv
 
 def main():
