@@ -30,6 +30,10 @@ def hello_world():
 
 This is a paragraph with a footnote[^1] and some more text to demonstrate paragraph handling. For more information about tables, see [ref:tables].
 
+### Inline Maths Example
+
+This is an example of inline maths: $y = mx + c$
+
 #### Image Example
 
 ![Example image caption](https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Vulpes_vulpes_ssp_fulvus.jpg/800px-Vulpes_vulpes_ssp_fulvus.jpg)

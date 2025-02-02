@@ -36,11 +36,10 @@ class MarkdownToPapermill:
         'superscript_html': re.compile(r'<sup>(.+?)<\/sup>'),
         'subscript_html': re.compile(r'<sub>(.+?)<\/sub>'),
         'cross_ref': re.compile(r'\[ref:(.+?)\]'),
-        'hyperlink': re.compile(r'\[(?!\^|ref:)(.+?)\]\((.+?)\)'),
-        # Inline math is handled separately.
+        'hyperlink': re.compile(r'\[(?!\^|ref:)(.+?)\]\((.+?)\)')
     }
 
-    # Block math patterns
+    # Block math patterns (to be converted to 'equation')
     BLOCK_MATH_START_PATTERN = re.compile(r'^\$\$\s*$')
     BLOCK_MATH_END_PATTERN = re.compile(r'^\$\$\s*$')
 
@@ -67,7 +66,7 @@ class MarkdownToPapermill:
         for k, v in replacements.items():
             markdown_text = markdown_text.replace(k, v)
 
-        # Extract and remove footnote definitions, and mark references
+        # Extract and remove footnote definitions; mark references in text
         markdown_text, self.footnotes = self._process_footnotes(markdown_text)
 
         lines = markdown_text.split('\n')
@@ -85,7 +84,7 @@ class MarkdownToPapermill:
         while i < len(lines):
             line = lines[i].strip()
 
-            # Handle block math (delimited by $$)
+            # Handle block math delimited by $$
             if self.BLOCK_MATH_START_PATTERN.match(line):
                 if buffer:
                     result.append(self._process_paragraph(' '.join(buffer)))
@@ -98,22 +97,21 @@ class MarkdownToPapermill:
                 i += 1  # Skip closing $$
                 math_text = '\n'.join(block_math_content).strip()
                 if math_text:
-                    result.append({"type": "math", "text": math_text})
+                    # Produce a block equation with property "equation"
+                    result.append({"type": "equation", "equation": math_text})
                 continue
 
-            # Handle code blocks (delimited by ```), including optional language specifiers
+            # Handle code blocks delimited by ```
             if line.startswith('```'):
                 if buffer:
                     result.append(self._process_paragraph(' '.join(buffer)))
                     buffer = []
-                # Optionally capture language (not used in the model)
-                code_language = line[3:].strip()
                 i += 1
                 code_lines = []
                 while i < len(lines) and not lines[i].strip().startswith('```'):
                     code_lines.append(lines[i])
                     i += 1
-                i += 1  # Skip the closing ```
+                i += 1  # Skip closing ```
                 code_text = "\n".join(code_lines)
                 result.append({"type": "code", "text": code_text})
                 continue
@@ -189,7 +187,7 @@ class MarkdownToPapermill:
                 i = self._process_table(lines, i, result)
                 continue
 
-            # Regular text line; accumulate into a paragraph buffer
+            # Regular text line
             buffer.append(line)
             i += 1
 
@@ -203,12 +201,20 @@ class MarkdownToPapermill:
             return {}
         hashes, text = match.groups()
         level = min(len(hashes), 5)
+        ref = None
+        # Look for a trailing reference marker, e.g., "Heading text [ref:my-ref]"
+        ref_match = re.search(r'\s*\[ref:([^\]]+)\]\s*$', text)
+        if ref_match:
+            ref = ref_match.group(1).strip()
+            text = text[:ref_match.start()].strip()
         heading_obj = {
             "type": "heading",
             "text": text.strip(),
             "level": level,
             "numbered": self.numbered
         }
+        if ref:
+            heading_obj["ref"] = ref
         return heading_obj
 
     def _process_list(self, lines: List[str], start_idx: int, result: List) -> int:
@@ -254,13 +260,13 @@ class MarkdownToPapermill:
         return raw_caption.strip()
 
     def _find_caption(self, lines: List[str], start_idx: int, prefix_patterns: List[str]) -> Tuple[Optional[str], int]:
-        # Look before the content
+        # Look before content
         for idx in range(max(0, start_idx - 2), start_idx):
             line = lines[idx].strip()
             for pattern in prefix_patterns:
                 if re.match(f'^{pattern}\.?\s*\d+', line, re.IGNORECASE):
                     return self._clean_caption_text(line), start_idx
-        # Look after the content
+        # Look after content
         for idx in range(start_idx + 1, min(len(lines), start_idx + 3)):
             line = lines[idx].strip()
             for pattern in prefix_patterns:
@@ -386,7 +392,6 @@ class MarkdownToPapermill:
         for part in parts:
             if '__' in part:
                 footnote_id, remaining = part.split('__', 1)
-                # Handle cross references or other special tokens if needed.
                 result.append({"type": "footnote", "text": self.footnotes.get(footnote_id, "")})
                 if remaining:
                     formatted = self._process_inline_math_and_formatting(remaining.strip())
@@ -410,7 +415,8 @@ class MarkdownToPapermill:
                 before = text[last_pos:m.start()]
                 segments.append(self._process_inline_formatting(before))
             math_content = m.group(1).strip()
-            segments.append({"type": "math", "text": math_content})
+            # Produce an inline equation with property "equation"
+            segments.append({"type": "equation", "equation": math_content})
             last_pos = m.end()
         if last_pos < len(text):
             trailing = text[last_pos:]

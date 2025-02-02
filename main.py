@@ -1,41 +1,52 @@
-# tests/test_create_pdf.py
+# data/main.py
 
 import os
 import json
 import requests
 from src.papermill_converter import MarkdownToPapermill
-from src.validation_model import PapermillDocument, DocumentContent
+from src.validation_model import PapermillDocument
 from dotenv import load_dotenv
 
 def main():
     load_dotenv()
 
+    # get these two from Papermill
     x_api_key = os.getenv("PAPERMILL_API_KEY")
     x_client_id = os.getenv("PAPERMILL_CLIENT_ID")
+
     url = "https://api.papermill.io/v1/pdf"
 
-    # Choose the JSON payload (e.g. letter.json)
-    json_file_path = os.path.join('json_file', 'letter.json')
+    # Load the payload (e.g. letter.json)
+    # You will get this from Papermill and will be of the following form:
+    """
+    {
+    "layoutId": "your_layout_id",
+    "placeholders": {
+        ...
+        }
+    }
+    """
+    json_file_path = 'data/json_file/report.json'  # you will need to put yout json file here
     with open(json_file_path, 'r', encoding='utf-8') as file:
         json_body = json.load(file)
 
     # Read the Markdown file
-    md_filepath = os.path.join('test_data_1.md')
+    md_filepath = os.path.join('data/test.md') # test file
     with open(md_filepath, 'r', encoding='utf-8') as file:
         markdown_text = file.read()
 
-    # Convert Markdown to Papermill JSON
-    converter = MarkdownToPapermill(numbered=False)
+    # Convert Markdown to Papermill JSON content
+    converter = MarkdownToPapermill(numbered=True)
     papermill_json = converter.convert(markdown_text)
 
     # Insert converted content into the JSON payload
     json_body["documentContent"] = papermill_json
 
-    # Validate the document content (using Pydantic)
-    validated_body = DocumentContent.model_validate({"documentContent": papermill_json})
+    # Validate the entire payload using the PapermillDocument model.
+    # Extra fields (such as placeholders) are allowed.
     document = PapermillDocument.model_validate(json_body)
 
-    # Prepare headers (note: content type must be "application/json")
+    # Prepare headers
     headers = {
         "x-api-key": x_api_key,
         "x-client-id": x_client_id,
@@ -49,11 +60,9 @@ def main():
         with open(pdf_path, "wb") as f:
             f.write(response.content)
         print("PDF generated successfully.")
-        # Open the PDF with the default viewer (Windows only; adjust for your OS as needed)
         try:
             os.startfile(pdf_path)
         except AttributeError:
-            # For non-Windows platforms, you may use an alternative method
             import subprocess
             subprocess.run(["open", pdf_path])
     else:

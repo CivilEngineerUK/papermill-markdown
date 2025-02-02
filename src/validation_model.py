@@ -25,12 +25,12 @@ class Code(BaseModel):
     type: Literal["code"]
     text: str
 
-class Math(BaseModel):
-    type: Literal["math"]
-    text: str
+class Equation(BaseModel):
+    type: Literal["equation"]
+    equation: str
 
 # Union type for text content
-TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Math]
+TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation]
 
 # Document content models
 class Heading(BaseModel):
@@ -63,28 +63,11 @@ class DocumentList(BaseModel):
     style: Literal["bullet", "number"]
     items: List[Union[str, List[TextContent]]]
 
-class Placeholders(BaseModel):
-    Title: Optional[Union[str, List[Union[str, FormattedText]]]] = None
-    Subtitle: Optional[str] = None
-    Subtitle2: Optional[str] = None
-    Year: Optional[str] = None
-    ProjectNumber: Optional[str] = None
-    ReportNumber: Optional[str] = None
-    Date: Optional[str] = None
-    # Additional placeholder fields if needed
-    RecipientName: Optional[str] = None
-    RecipientJobTitle: Optional[str] = None
-    CompanyName: Optional[str] = None
-    CompanyAddress: Optional[str] = None
-    CompanyAddress2: Optional[str] = None
-    CompanyCity: Optional[str] = None
-    CompanyPostcode: Optional[str] = None
-    AuthorName: Optional[str] = None
-    AuthorJobTitle: Optional[str] = None
-
 class DocumentContent(BaseModel):
-    documentContent: ClassVar[List[Union[Heading, Paragraph, Image, Table, DocumentList, Math, Code]]]
+    documentContent: ClassVar[List[Union[Heading, Paragraph, Image, Table, DocumentList, Equation, Code]]]
 
 class PapermillDocument(DocumentContent):
     layoutId: str
-    placeholders: Placeholders
+
+    class Config:
+        extra = "allow"
