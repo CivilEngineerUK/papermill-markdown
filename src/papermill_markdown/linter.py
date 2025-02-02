@@ -1,10 +1,10 @@
-# linter.py
+# src/papermill_markdown/linter.py
 
 """
 A module for linting and auto-formatting Markdown files prior to conversion
 with the Papermill converter. This module uses mdformat to reformat Markdown
 and then applies additional linting rules. In this example, we check for table
-caption positioning: captions that appear above a table are moved below it,
+caption positioning: captions that appear below a table are moved above it,
 and an issue is reported.
 """
 
@@ -33,7 +33,7 @@ class MarkdownLinter:
 
         First, mdformat is used to standardize the Markdown.
         Then, the linter scans the text to enforce table caption positioning.
-        - If a table caption is found below a table, it is moved above the table.
+          - If a table caption is found below a table, it is moved above the table.
         Also, each line is checked for an odd number of unescaped "$" signs to detect inline math mismatches.
 
         Returns:
@@ -57,7 +57,6 @@ class MarkdownLinter:
             if stripped.startswith("|"):
                 # Collect all consecutive table lines.
                 table_lines = []
-                start_table = i
                 while i < len(lines) and lines[i].strip().startswith("|"):
                     table_lines.append(lines[i])
                     i += 1
@@ -87,6 +86,12 @@ class MarkdownLinter:
 
         # Join the fixed lines back into text.
         self.fixed_text = "\n".join(fixed_lines)
+
+        # --- NEW CODE: Unescape footnote definitions ---
+        # mdformat may escape footnote markers (e.g., "\[^1\]:"), so we remove those extra backslashes.
+        self.fixed_text = re.sub(r'\\\[\^', '[^', self.fixed_text)
+        self.fixed_text = re.sub(r'\\\]:', ']:', self.fixed_text)
+        # -----------------------------------------------------
 
         # Check for unmatched inline math delimiters in each line.
         for idx, line in enumerate(fixed_lines):
