@@ -85,6 +85,7 @@ Note: You will need a Papermill account to get a layout_id as well as the API ke
 
 1. Fix equations in lists, bold and italics
 2. Add support for boxes
+3. Add superscript and subscript support
 
 # Contributing
 
