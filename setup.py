@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="papermill-markdown",
-    version="0.1.2",
+    version="0.1.3",
     packages=["papermill_markdown"],
     description="A converter to transform Markdown into Papermill JSON payloads",
     author="Michael Rustell",
@@ -14,7 +14,8 @@ setup(
     install_requires=[
         "pydantic",
         "requests",
-        "python-dotenv"
+        "python-dotenv",
+        "mdformat"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
