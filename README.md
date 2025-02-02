@@ -15,11 +15,18 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 - **Schema Validation:**  
   Uses Pydantic models to ensure the converted JSON adheres to the Papermill API schema.
 
+- **Linter Functionality:**  
+  Identifies and resolves issues in the Markdown content, providing feedback on potential problems and automatically correcting some formatting errors.
+
 - **Example Prompt:**  
-  Provides a sample Markdown file (prompt.md) that follows the Papermill style guide.
+  Provides a sample prompt (data/prompt.md) that can be given to an LLM to help it to follow a consistent markdown style guide.
 
 - **Structured JSON Output:**  
   *Not tested yet* Use the `DocumentContent` pydantic model to create structured output from an LLM.
+
+- **Papermill API Reference:**  
+  Included in `data/papermill_api_reference.txt` is a reference guide for the Papermill API. Note, this is correct as of 02/02/2025 and should be used in conjunction with the official Papermill API documentation.
+  *Note:* The Box element is not yet supported in this repo as it is stylistic and more difficult to formalise rules for.
 
 # Installation 
 
@@ -45,7 +52,7 @@ md_filepath = os.path.join('data', 'test.md')  # test file
 with open(md_filepath, 'r', encoding='utf-8') as file:
     markdown_original_text = file.read()
 
-# Lint the Markdown file
+# Lint the Markdown file and detail the issues and changes to the file
 linter = MarkdownLinter(markdown_original_text)
 open_issues, resolved_issues, markdown_text = linter.lint()
 
@@ -57,6 +64,27 @@ papermill_json = converter.convert(markdown_text)
 document = DocumentContent.model_validate(papermill_json).model_dump()
 print(document)
 ```
+
+You would then insert this into the Papermill API as follows:
+
+```python
+{
+    "layoutId": "your_layout_id",
+    "placeholders": {
+        "RecipientName": "John Smith",
+        # Add more placeholders here
+    },
+    "documentContent": document
+}
+```
+
+Note: You will need a Papermill account to get a layout_id as well as the API key to send this to the API for PDF conversion.
+
+
+# TODO
+
+1. Fix equations in lists, bold and italics
+2. Add support for boxes
 
 # Contributing
 
