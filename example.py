@@ -1,4 +1,8 @@
-# data/main.py
+# data/example.py
+
+"""
+Note that this file will only run if you have the necessary environment variables set up and the necessary files in the data folder.
+"""
 
 import os
 import json

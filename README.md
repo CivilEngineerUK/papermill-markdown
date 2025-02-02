@@ -35,7 +35,7 @@ PAPERMILL_CLIENT_ID=your_client_id_here
 To convert a Markdown file and generate a PDF using the Papermill API, run the provided example script:
 
 ```bash
-python data/main.py
+python data/example.py
 ```
 
 The script performs the following steps:
@@ -52,7 +52,7 @@ The script performs the following steps:
 After configuring your .env file with your API credentials, simply run:
 
 ```bash
-python data/main.py
+python data/example.py
 ```
 
 If successful, you will see the message "PDF generated successfully." and an output.pdf file will be created in the repository directory.
