@@ -19,15 +19,14 @@ class MarkdownLinter:
     # Optionally, a similar pattern can be defined for figure captions if desired.
     FIGURE_CAPTION_PATTERN = re.compile(r'^(Figure|Fig|FIGURE|FIG)\.?\s*\d+', re.IGNORECASE)
 
-    def __init__(self, markdown_text: str):
+    def __init__(self):
         """
         Initialize the linter with the Markdown text.
         """
-        self.original_text = markdown_text
         self.fixed_text = None
         self.issues = []  # List of tuples: (line number, description)
 
-    def lint(self) -> (list, str):
+    def lint(self, markdown_text) -> (list, str):
         """
         Lint and auto-format the Markdown.
 
@@ -37,7 +36,7 @@ class MarkdownLinter:
             - The fixed Markdown text as a single string
         """
         # First, use mdformat to standardize the Markdown.
-        formatted_text = mdformat.text(self.original_text)
+        formatted_text = mdformat.text(markdown_text)
         lines = formatted_text.splitlines()
 
         fixed_lines = []

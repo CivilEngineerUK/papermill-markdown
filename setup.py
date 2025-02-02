@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="papermill-markdown",
-    version="0.1.3",
+    version="0.1.4",
     packages=["papermill_markdown"],
     description="A converter to transform Markdown into Papermill JSON payloads",
     author="Michael Rustell",
