@@ -9,6 +9,9 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 - **Comprehensive Markdown Parsing:**  
   Supports headings (with optional `[ref:identifier]` markers), paragraphs with inline formatting, inline math (using `$...$`), block math (enclosed by standalone `$$` lines), code blocks (using triple backticks), lists (numbered and bullet), images (with captions and optional attributes), and tables.
   
+- **Page Breaks:**  
+  Inserts page breaks between Markdown sections by use of a triple new line to ensure proper formatting in the generated PDF.
+
 - **Schema Validation:**  
   Uses Pydantic models to ensure the converted JSON adheres to the Papermill API schema.
 
@@ -17,7 +20,7 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 
 - **Example Prompt:**  
   Provides a sample Markdown file (prompt.md) that follows the Papermill style guide.
-- 
+
 # Configuration
 
 Create a `.env` file in the root directory and add your Papermill API credentials:
