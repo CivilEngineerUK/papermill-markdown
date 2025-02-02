@@ -17,10 +17,7 @@ It is based on the documentation here: [Papermill API Documentation](https://doc
 
 - **Example Prompt:**  
   Provides a sample Markdown file (prompt.md) that follows the Papermill style guide.
-
-- **Page Breaks:**  
-  Supports new page breaks in the Markdown content by using three consecutive newlines.
-
+- 
 # Configuration
 
 Create a `.env` file in the root directory and add your Papermill API credentials:
@@ -31,8 +28,6 @@ PAPERMILL_CLIENT_ID=your_client_id_here
 ```
 
 # Usage
-
-## Using a Script
 
 To convert a Markdown file and generate a PDF using the Papermill API, run the provided example script:
 
@@ -58,24 +53,6 @@ python data/main.py
 ```
 
 If successful, you will see the message "PDF generated successfully." and an output.pdf file will be created in the repository directory.
-
-## Using the MarkdownToPapermill Class
-
-You can also use the MarkdownToPapermill class directly in your own scripts. Here's an example of creating the content payload:
-
-```python
-import os
-from src.papermill_converter import MarkdownToPapermill
-
-# Read the Markdown file
-md_filepath = os.path.join('data/steel.md') # test file
-with open(md_filepath, 'r', encoding='utf-8') as file:
-    markdown_text = file.read()
-
-# Convert Markdown to Papermill JSON content
-converter = MarkdownToPapermill(numbered=True)
-papermill_json = converter.convert(markdown_text)
-```
 
 # Contributing
 
