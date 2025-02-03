@@ -82,14 +82,13 @@ Note: You will need a Papermill account to get a layout_id as well as the API ke
 
 # TODO
 
-1. Fix equations in lists, bold and italics
-2. Add support for boxes
-3. Check that superscript and subscript in lists are
+1. Fix equations in lists, bold and italics - cannot seem to get this working.
+2. Add support for boxes as per [Papermill API Documentation](https://docs.papermill.io/).
 
 # Changelog
 
 - **0.1.10:** 03/02/2025
-  - Added support for superscript and subscript.
+  - Added support for superscript and subscript including in lists, bold and italics.
 
 # Contributing
 

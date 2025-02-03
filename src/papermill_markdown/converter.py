@@ -360,6 +360,13 @@ class MarkdownToPapermill:
         tokens = []
         pos = 0
         while pos < len(text):
+            # First, check for an inline math token at the current position.
+            math_match = self.INLINE_MATH_PATTERN.match(text, pos)
+            if math_match:
+                tokens.append({"type": "equation", "equation": math_match.group(1).strip()})
+                pos = math_match.end()
+                continue
+
             match_found = False
             # Try each formatting pattern in the defined order.
             for fmt, pattern in self.INLINE_FORMATTING_PATTERNS.items():
@@ -368,7 +375,7 @@ class MarkdownToPapermill:
                     inner_text = m.group(1)
                     # Recursively process the inner text for nested formatting.
                     inner_tokens = self._process_inline_formatting(inner_text)
-                    # Determine formatting flag based on the pattern.
+                    # Set the flag according to the formatting type.
                     flag = {}
                     if fmt == "bold_italic":
                         flag["bold"] = True
@@ -403,13 +410,13 @@ class MarkdownToPapermill:
                     match_found = True
                     break
             if not match_found:
-                # If no formatting marker is found at the current position,
-                # grab plain text until the next formatting marker.
+                # If no formatting marker or inline math is found at this position,
+                # grab plain text until the next formatting or math marker.
                 next_pos = len(text)
-                for pat in self.INLINE_FORMATTING_PATTERNS.values():
-                    m = pat.search(text, pos)
-                    if m:
-                        next_pos = min(next_pos, m.start())
+                for pat in list(self.INLINE_FORMATTING_PATTERNS.values()) + [self.INLINE_MATH_PATTERN]:
+                    nm = pat.search(text, pos)
+                    if nm:
+                        next_pos = min(next_pos, nm.start())
                 tokens.append(text[pos:next_pos])
                 pos = next_pos
         tokens = [t for t in tokens if t != ""]
