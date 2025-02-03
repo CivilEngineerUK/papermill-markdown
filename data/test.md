@@ -15,9 +15,37 @@ This is a **bold text** and *italic text* example. You can also have a [hyperlin
 - Bullet point three with *italic text*
 
 #### Subsection with Superscript and Subscript
-Super^script^ and Sub~script~.
+Super^script^ and Sub~script~. 
 
-Some random information about H<sup>2</sup>O and CO<sub>2</sub>
+##### Superscript and Script using HTML Tags
+Some random information about H<sup>2</sup>O and CO<sub>2</sub>.
+
+##### Superscript and Script in a List
+- Super^script^
+- Sub~script~
+
+1. Super^script^
+2. Sub~script~
+
+##### Superscript and Script in Bold
+**Super^script^**
+**Sub~script~**
+- 
+- **Super^script^**
+- **Sub~script~**
+
+1. **Super^script^**
+2. **Sub~script~**
+
+##### Superscript and Script in Italics
+*Super^script^*
+*Sub~script~*
+
+- *Super^script^*
+- *Sub~script~*
+
+1. *Super^script^*
+2. *Sub~script~*
 
 ### Code Block Example
 
@@ -39,6 +67,17 @@ This is an example of inline maths: $y = mx + c$
 $$
 y = mx + c
 $$
+
+### Math in a List Example
+- $y = mx + c$
+
+1. $y = mx + c$
+
+#### Math in Bold
+**$y = mx + c$**
+
+#### Math in Italics
+*$y = mx + c$*
 
 #### Image Example
 

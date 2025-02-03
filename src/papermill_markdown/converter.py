@@ -16,8 +16,7 @@ class MarkdownToPapermill:
     CAPTION_PATTERN = re.compile(r'^(?:Table|Tab|TABLE|TAB)\.?\s*\d+', re.IGNORECASE)
     FIGURE_PATTERN = re.compile(r'^(?:Figure|Fig|FIGURE|FIG)\.?\s*\d+', re.IGNORECASE)
     REFERENCE_SECTION_PATTERNS = [
-        re.compile(r'^#{0,6}\s*(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$',
-                   re.IGNORECASE),
+        re.compile(r'^#{0,6}\s*(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$', re.IGNORECASE),
         re.compile(r'^(References?|Bibliography|Works\s+Cited|Literature(\s+Cited)?|Sources?)$', re.IGNORECASE)
     ]
     REFERENCE_LINE_PATTERNS = [
@@ -356,45 +355,70 @@ class MarkdownToPapermill:
                 flat.append(seg)
         return flat if len(flat) > 1 else (flat[0] if flat else "")
 
+    # Updated recursive inline formatting method
     def _process_inline_formatting(self, text: str) -> Union[str, List]:
         tokens = []
         pos = 0
         while pos < len(text):
-            found = False
+            match_found = False
+            # Try each formatting pattern in the defined order.
             for fmt, pattern in self.INLINE_FORMATTING_PATTERNS.items():
-                m = pattern.search(text, pos)
-                if m and m.start() == pos:
-                    token = {"text": m.group(1)}
+                m = pattern.match(text, pos)
+                if m:
+                    inner_text = m.group(1)
+                    # Recursively process the inner text for nested formatting.
+                    inner_tokens = self._process_inline_formatting(inner_text)
+                    # Determine formatting flag based on the pattern.
+                    flag = {}
                     if fmt == "bold_italic":
-                        token["bold"] = True
-                        token["italic"] = True
+                        flag["bold"] = True
+                        flag["italic"] = True
                     elif fmt == "bold":
-                        token["bold"] = True
+                        flag["bold"] = True
                     elif fmt == "italic":
-                        token["italic"] = True
+                        flag["italic"] = True
                     elif fmt == "underline":
-                        token["underline"] = True
-                    tokens.append(token)
+                        flag["underline"] = True
+                    elif fmt in ["superscript_md", "superscript_html"]:
+                        flag["superscript"] = True
+                    elif fmt in ["subscript_md", "subscript_html"]:
+                        flag["subscript"] = True
+                    # Merge the flag into each token from the inner parsing.
+                    if isinstance(inner_tokens, list):
+                        for token in inner_tokens:
+                            if isinstance(token, dict):
+                                merged = dict(flag)
+                                merged.update(token)
+                                tokens.append(merged)
+                            else:
+                                tokens.append({**flag, "text": token})
+                    else:
+                        if isinstance(inner_tokens, dict):
+                            merged = dict(flag)
+                            merged.update(inner_tokens)
+                            tokens.append(merged)
+                        else:
+                            tokens.append({**flag, "text": inner_tokens})
                     pos = m.end()
-                    found = True
+                    match_found = True
                     break
-            if not found:
-                next_pos = pos
+            if not match_found:
+                # If no formatting marker is found at the current position,
+                # grab plain text until the next formatting marker.
+                next_pos = len(text)
                 for pat in self.INLINE_FORMATTING_PATTERNS.values():
                     m = pat.search(text, pos)
                     if m:
-                        next_pos = m.start() if next_pos == pos else min(next_pos, m.start())
-                if next_pos == pos:
-                    next_pos = len(text)
+                        next_pos = min(next_pos, m.start())
                 tokens.append(text[pos:next_pos])
                 pos = next_pos
         tokens = [t for t in tokens if t != ""]
-        return tokens if len(tokens) > 1 else (tokens[0] if tokens else "")
+        if len(tokens) == 1:
+            return tokens[0]
+        return tokens
 
     def _is_reference_section_heading(self, line: str) -> bool:
         return any(pattern.match(line) for pattern in self.REFERENCE_SECTION_PATTERNS)
 
     def _is_reference_line(self, line: str) -> bool:
         return any(pattern.match(line) for pattern in self.REFERENCE_LINE_PATTERNS)
-
-

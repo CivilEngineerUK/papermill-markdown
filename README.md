@@ -80,12 +80,16 @@ You would then insert this into the Papermill API as follows:
 
 Note: You will need a Papermill account to get a layout_id as well as the API key to send this to the API for PDF conversion.
 
-
 # TODO
 
 1. Fix equations in lists, bold and italics
 2. Add support for boxes
-3. Add superscript and subscript support
+3. Check that superscript and subscript in lists are
+
+# Changelog
+
+- **0.1.10:** 03/02/2025
+  - Added support for superscript and subscript.
 
 # Contributing
 
