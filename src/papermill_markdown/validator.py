@@ -37,6 +37,12 @@ class Break(BaseModel):
 # Union for inline text content
 TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation]
 
+# A cell in the table can be:
+#  - a simple string,
+#  - a single inline element (Equation, Footnote, FormattedText, etc.),
+#  - or a list of inline elements (mixed text + equation, etc.)
+CellContent = Union[str, TextContent, List[TextContent]]
+
 # Block element models
 class Heading(BaseModel):
     type: Literal["heading"]
@@ -58,9 +64,11 @@ class Image(BaseModel):
 
 class Table(BaseModel):
     type: Literal["table"]
-    header: List[str]
-    body: List[List[str]]
-    caption: Optional[str] = None
+    # Now allow each header cell to be any valid "CellContent"
+    header: List[CellContent]
+    # Each row is a list of "CellContent"
+    body: List[List[CellContent]]
+    caption: Optional[Union[str, List[TextContent]]] = None
     transpose: Optional[bool] = None
 
 class DocumentList(BaseModel):
@@ -69,10 +77,18 @@ class DocumentList(BaseModel):
     items: List[Union[str, List[TextContent]]]
 
 # Union of all document elements
-DocumentElement = Union[Heading, Paragraph, Image, Table, DocumentList, Equation, Code, Break]
+DocumentElement = Union[
+    Heading,
+    Paragraph,
+    Image,
+    Table,
+    DocumentList,
+    Equation,
+    Code,
+    Break
+]
 
-# Corrected validator for a documentContent payload (a list of DocumentElement)
+# Validator for an entire document (a list of DocumentElement)
 class DocumentContent(RootModel[List[DocumentElement]]):
     def get_elements(self) -> List[DocumentElement]:
         return self.__root__
-

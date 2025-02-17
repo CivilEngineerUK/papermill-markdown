@@ -266,26 +266,65 @@ class MarkdownToPapermill:
             return f"data:{mime};base64,{b64}"
         return url
 
+    def _maybe_listify(self, item: Union[str, Dict, List]) -> Union[str, Dict, List]:
+        """
+        Helper to match the example's style of rendering:
+          - If the result is a list of length 1, return just that item.
+          - Otherwise return the entire list or single item as is.
+        """
+        if isinstance(item, list):
+            if len(item) == 1:
+                return item[0]
+            return item
+        return item
+
     def _process_table(self, lines: List[str], start_idx: int, result: List) -> int:
         caption, i = self._find_caption(lines, start_idx, ["Table", "Tab", "TABLE", "TAB"])
         if i >= len(lines) or not lines[i].strip().startswith("|"):
             return i
+
+        # Process the table header
         header_line = lines[i].strip()
         header_cells = [cell.strip() for cell in header_line.split("|")[1:-1]]
         i += 1
+
+        # Possibly skip the separator line (e.g., | --- | --- | )
         if i < len(lines) and re.match(r'^\|(?:\s*[-:]+\s*\|)+', lines[i].strip()):
             i += 1
-        body = []
+
+        # Process the table body
+        body_raw = []
         while i < len(lines):
             line = lines[i].strip()
             if not line.startswith("|"):
                 break
             cells = [cell.strip() for cell in line.split("|")[1:-1]]
-            body.append(cells)
+            body_raw.append(cells)
             i += 1
+
+        # Look for a trailing caption if none found before
         if not caption:
             caption, i = self._find_caption(lines, i, ["Table", "Tab", "TABLE", "TAB"])
-        table_obj = {"type": "table", "header": header_cells, "body": body, "caption": caption or ""}
+
+        # Convert header/body cells to handle inline math, etc.
+        header_processed = [
+            self._maybe_listify(self._process_inline_math_and_formatting(h))
+            for h in header_cells
+        ]
+        body_processed = []
+        for row in body_raw:
+            processed_row = []
+            for cell in row:
+                cell_content = self._process_inline_math_and_formatting(cell)
+                processed_row.append(self._maybe_listify(cell_content))
+            body_processed.append(processed_row)
+
+        table_obj = {
+            "type": "table",
+            "header": header_processed,
+            "body": body_processed,
+            "caption": caption or ""
+        }
         result.append(table_obj)
         return i
 
@@ -330,37 +369,60 @@ class MarkdownToPapermill:
                 if rem:
                     tokens = self._process_inline_math_and_formatting(rem.strip())
                     if tokens:
-                        content.extend(tokens if isinstance(tokens, list) else [tokens])
+                        if isinstance(tokens, list):
+                            content.extend(tokens)
+                        else:
+                            content.append(tokens)
             else:
                 tokens = self._process_inline_math_and_formatting(part.strip())
                 if tokens:
-                    content.extend(tokens if isinstance(tokens, list) else [tokens])
+                    if isinstance(tokens, list):
+                        content.extend(tokens)
+                    else:
+                        content.append(tokens)
         return {"type": "paragraph", "text": content if content else [""]}
 
     def _process_inline_math_and_formatting(self, text: str) -> Union[str, List]:
+        """
+        Finds inline math ($...$) first, splits them out, then processes
+        each non-math segment for additional formatting. Returns either
+        a single string/dict or a list of strings/dicts.
+        """
         segments = []
         last = 0
         for m in self.INLINE_MATH_PATTERN.finditer(text):
             if m.start() > last:
                 segments.append(self._process_inline_formatting(text[last:m.start()]))
+            # This segment is an equation
             segments.append({"type": "equation", "equation": m.group(1).strip()})
             last = m.end()
         if last < len(text):
             segments.append(self._process_inline_formatting(text[last:]))
+
+        # Flatten lists in segments if needed
         flat = []
         for seg in segments:
             if isinstance(seg, list):
                 flat.extend(seg)
             elif seg:
                 flat.append(seg)
-        return flat if len(flat) > 1 else (flat[0] if flat else "")
 
-    # Updated recursive inline formatting method
+        if len(flat) == 0:
+            return ""
+        if len(flat) == 1:
+            return flat[0]
+        return flat
+
     def _process_inline_formatting(self, text: str) -> Union[str, List]:
+        """
+        Recursively processes all inline formatting (bold, italic, underline, etc.)
+        but stops if we hit an inline math marker again. Returns either a single
+        string/dict or a list of strings/dicts.
+        """
         tokens = []
         pos = 0
         while pos < len(text):
-            # First, check for an inline math token at the current position.
+            # Check for inline math at current position
             math_match = self.INLINE_MATH_PATTERN.match(text, pos)
             if math_match:
                 tokens.append({"type": "equation", "equation": math_match.group(1).strip()})
@@ -368,14 +430,12 @@ class MarkdownToPapermill:
                 continue
 
             match_found = False
-            # Try each formatting pattern in the defined order.
+            # Try each formatting pattern in order
             for fmt, pattern in self.INLINE_FORMATTING_PATTERNS.items():
                 m = pattern.match(text, pos)
                 if m:
                     inner_text = m.group(1)
-                    # Recursively process the inner text for nested formatting.
                     inner_tokens = self._process_inline_formatting(inner_text)
-                    # Set the flag according to the formatting type.
                     flag = {}
                     if fmt == "bold_italic":
                         flag["bold"] = True
@@ -390,7 +450,7 @@ class MarkdownToPapermill:
                         flag["superscript"] = True
                     elif fmt in ["subscript_md", "subscript_html"]:
                         flag["subscript"] = True
-                    # Merge the flag into each token from the inner parsing.
+                    # Merge formatting flags into inner tokens
                     if isinstance(inner_tokens, list):
                         for token in inner_tokens:
                             if isinstance(token, dict):
@@ -406,12 +466,13 @@ class MarkdownToPapermill:
                             tokens.append(merged)
                         else:
                             tokens.append({**flag, "text": inner_tokens})
+
                     pos = m.end()
                     match_found = True
                     break
+
             if not match_found:
-                # If no formatting marker or inline math is found at this position,
-                # grab plain text until the next formatting or math marker.
+                # No formatting or math match here, so grab plain text
                 next_pos = len(text)
                 for pat in list(self.INLINE_FORMATTING_PATTERNS.values()) + [self.INLINE_MATH_PATTERN]:
                     nm = pat.search(text, pos)
@@ -419,6 +480,7 @@ class MarkdownToPapermill:
                         next_pos = min(next_pos, nm.start())
                 tokens.append(text[pos:next_pos])
                 pos = next_pos
+
         tokens = [t for t in tokens if t != ""]
         if len(tokens) == 1:
             return tokens[0]
