@@ -1,10 +1,27 @@
 # src/papermill_markdown/validator.py
 
-from pydantic import RootModel
-from typing import List, Union, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import RootModel, BaseModel, Field, model_validator
+from typing import List, Union, Literal, Optional, Dict
 
+# ==================
+# 1) Add a new ReferenceObject and top-level references property
+# ==================
+class ReferenceObject(BaseModel):
+    bibtex: Optional[str] = None
+    isbn: Optional[str] = None
+    doi: Optional[str] = None
+
+    @model_validator(mode="after")
+    def check_at_least_one(self) -> "ReferenceObject":
+        if not (self.bibtex or self.isbn or self.doi):
+            raise ValueError("A reference must have at least one of: bibtex, isbn, doi.")
+        return self
+
+
+
+# ==================
 # Inline content models
+# ==================
 class FormattedText(BaseModel):
     text: str
     bold: Optional[bool] = None
@@ -34,13 +51,20 @@ class Equation(BaseModel):
 class Break(BaseModel):
     type: Literal["break"]
 
+# ==================
+# 2) Add a new ReferenceInline for in-line references
+# ==================
+class ReferenceInline(BaseModel):
+    type: Literal["reference"]
+    ref: str
+
 # Union for inline text content
-TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation]
+TextContent = Union[str, FormattedText, CrossReference, Footnote, Code, Equation, ReferenceInline]
 
 # A cell in the table can be:
-#  - a simple string,
-#  - a single inline element (Equation, Footnote, FormattedText, etc.),
-#  - or a list of inline elements (mixed text + equation, etc.)
+# - a simple string,
+# - a single inline element (Equation, Footnote, FormattedText, etc.),
+# - or a list of inline elements
 CellContent = Union[str, TextContent, List[TextContent]]
 
 # Block element models
@@ -54,6 +78,7 @@ class Heading(BaseModel):
 class Paragraph(BaseModel):
     type: Literal["paragraph"]
     text: Union[str, List[TextContent]]
+    style: Optional[str] = None  # e.g. "preview"
 
 class Image(BaseModel):
     type: Literal["image"]
@@ -64,9 +89,7 @@ class Image(BaseModel):
 
 class Table(BaseModel):
     type: Literal["table"]
-    # Now allow each header cell to be any valid "CellContent"
     header: List[CellContent]
-    # Each row is a list of "CellContent"
     body: List[List[CellContent]]
     caption: Optional[Union[str, List[TextContent]]] = None
     transpose: Optional[bool] = None
@@ -88,7 +111,19 @@ DocumentElement = Union[
     Break
 ]
 
-# Validator for an entire document (a list of DocumentElement)
+# ==================
+# 3) For code compatibility, keep DocumentContent as is,
+#    but typically you'd have a new top-level "DocumentModel"
+#    that includes references + content. Example:
+# ==================
 class DocumentContent(RootModel[List[DocumentElement]]):
     def get_elements(self) -> List[DocumentElement]:
         return self.__root__
+
+
+# NEW/UPDATED: an optional top-level model if desired:
+class DocumentModel(BaseModel):
+    # “references” can be included at the top level
+    references: Optional[Dict[str, ReferenceObject]] = None
+    # The main content
+    documentContent: DocumentContent

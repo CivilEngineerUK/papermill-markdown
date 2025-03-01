@@ -89,6 +89,8 @@ Note: You will need a Papermill account to get a layout_id as well as the API ke
 
 - **0.1.10:** 03/02/2025
   - Added support for superscript and subscript including in lists, bold and italics.
+- **0.1.11:** 01/03/2025
+  - Added support for Base64 encoded images i.e. local images.
 
 # Contributing
 
